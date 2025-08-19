@@ -144,7 +144,7 @@ pipeline {
                     # Example: command -v docker
                     if ! command -v az &> /dev/null; then
                         echo "Installing Azure CLI..."
-                        curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+                        curl -sL https://aka.ms/InstallAzureCLIDeb | bash
                     else
                         echo "Azure CLI is already installed."
                     fi
@@ -178,3 +178,4 @@ pipeline {
 }
 
 // docker run -d --name simple-spring-api -p 9595:9595 simple-spring-api:latest
+
