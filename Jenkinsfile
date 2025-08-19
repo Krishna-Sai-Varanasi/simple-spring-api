@@ -26,7 +26,7 @@ pipeline{
         stage('Build') {
             steps {
                 echo 'Building with Maven...'
-                sh 'mvn clean install'
+                bat 'mvn clean install'
             }
         }
 
@@ -35,7 +35,7 @@ pipeline{
         stage('Test') {
             steps {
                 echo 'Running tests...'
-                sh 'mvn test'
+                bat 'mvn test'
             }
             // post actions for the test stage
             post {
