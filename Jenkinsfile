@@ -15,8 +15,10 @@ pipeline {
         // define the SonarQube server URL and credentials
         SONARQUBE_SERVER = 'SonarCloud'
         SONAR_PROJECT_KEY = 'ashish-panicker_simple-spring-api'
-        SONAR_PROJECT_NAME = 'simple-spring-api'
+        // Display Name in SonarQube
+        SONAR_PROJECT_NAME = 'simple-spring-api' 
         SONAR_ORGANIZATION = 'ashish-panicker'
+
         // --- Docker / Deploy ---
         APP_NAME              = 'simple-spring-api'
         // <username>/<repo>
@@ -130,7 +132,40 @@ pipeline {
             }
         }
 
-                 
+        stage('Setup Deployment Tools') {
+            steps {
+                echo 'Setting up deployment tools [AZ-CLI, Kubectl]...'
+                sh '''
+                    # Ensure the script fails on any error
+                    # and prints each command before executing it
+                    set -eux
+
+                    # command <command-name> checks if a command is available
+                    # Example: command -v docker
+                    if ! command -v az &> /dev/null; then
+                        echo "Installing Azure CLI..."
+                        curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+                    else
+                        echo "Azure CLI is already installed."
+                    fi
+
+                    # Check the version of Azure CLI
+                    az --version || true
+
+                    # Check if kubectl is installed
+                    if ! command -v kubectl &> /dev/null; then
+                        echo "kubectl not found. Installing..."
+                        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+                        chmod +x kubectl
+                        mv kubectl /usr/local/bin/
+                    else
+                        echo "kubectl already installed."
+                    fi
+                    kubectl version --client || true
+                    
+                '''
+            }
+        }
     }
 
     post {
@@ -141,3 +176,5 @@ pipeline {
     }
 
 }
+
+// docker run -d --name simple-spring-api -p 9595:9595 simple-spring-api:latest
