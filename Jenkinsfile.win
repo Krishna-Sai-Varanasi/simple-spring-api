@@ -1,4 +1,5 @@
 pipeline {
+    
     agent {
         docker {
             // Use a Docker image that has JDK 21 and Maven installed

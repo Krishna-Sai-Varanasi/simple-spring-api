@@ -1,111 +1,157 @@
 package com.example.simple_spring_api.controller;
 
 import com.example.simple_spring_api.dto.TaskDto;
+import com.example.simple_spring_api.exceptions.TaskNotFoundException;
 import com.example.simple_spring_api.model.Task;
 import com.example.simple_spring_api.service.TaskService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/**
- * Unit tests for TaskController using Spring Boot's @WebMvcTest and MockMvc.
- * This test class verifies the behavior of REST endpoints without starting the full application context.
- */
-@WebMvcTest(TaskController.class) // Loads only TaskController and MVC-related beans for testing
+@WebMvcTest(TaskController.class)
 class TaskControllerTest {
 
     @Autowired
-    private MockMvc mockMvc; // MockMvc allows simulating HTTP requests without running a server
+    private MockMvc mockMvc;
 
-    @MockitoBean // Creates a Mockito mock of TaskService and injects it into TaskController
+    @MockBean
     private TaskService taskService;
 
     @Autowired
-    private ObjectMapper objectMapper; // Used to convert Java objects to JSON and vice versa
+    private ObjectMapper objectMapper;
 
-    /**
-     * Test: POST /api/v1/tasks
-     * Goal: Ensure that creating a new task returns HTTP 201 and the correct response body.
-     */
+    private Task task;
+
+    @BeforeEach
+    void setUp() {
+        task = Task.builder()
+                .id(1L)
+                .name("Test Task")
+                .description("Test Description")
+                .completed(false)
+                .build();
+    }
+
+    // ---------------- Positive Tests ----------------
+
     @Test
     void testCreateTask() throws Exception {
-        // Input DTO representing the task to be created
-        TaskDto dto = new TaskDto(1L, "Test Task", "Description", false);
+        TaskDto dto = new TaskDto(1L, "Test Task", "Test Description", false);
 
-        // Mocked Task object returned by the service after saving
-        Task task = Task.builder()
+        Mockito.when(taskService.saveTask(any(Task.class))).thenReturn(task);
+
+        mockMvc.perform(post("/api/v1/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.message").value("Task created successfully"))
+                .andExpect(jsonPath("$.data.name").value("Test Task"));
+    }
+
+    @Test
+    void testUpdateTask() throws Exception {
+        TaskDto dto = new TaskDto(1L, "Updated Task", "Updated Description", false);
+        Task updatedTask = Task.builder()
                 .id(1L)
-                .name("Test Task")
-                .description("Description")
+                .name("Updated Task")
+                .description("Updated Description")
                 .completed(false)
                 .build();
 
-        // Define service mock behavior
-        Mockito.when(taskService.saveTask(Mockito.any(Task.class))).thenReturn(task);
+        Mockito.when(taskService.updateTask(any(Task.class))).thenReturn(updatedTask);
 
-        // Perform POST request and validate response
-        mockMvc.perform(post("/api/v1/tasks")
-                .contentType(MediaType.APPLICATION_JSON) // Sending JSON data
-                .content(objectMapper.writeValueAsString(dto))) // Convert DTO to JSON string
-                .andExpect(status().isCreated()) // Expect HTTP 201 Created
-                .andExpect(jsonPath("$.message").value("Task created successfully")) // Verify response message
-                .andExpect(jsonPath("$.data.name").value("Test Task")); // Verify returned task name
+        mockMvc.perform(put("/api/v1/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Task updated successfully"))
+                .andExpect(jsonPath("$.data.name").value("Updated Task"));
     }
 
-    /**
-     * Test: GET /api/v1/tasks/{taskId}
-     * Goal: Ensure that fetching a task by ID returns HTTP 200 and the correct task data.
-     */
     @Test
     void testGetTaskById() throws Exception {
-        // Mocked Task object returned by the service
-        Task task = Task.builder()
-                .id(1L)
-                .name("Test Task")
-                .description("Description")
-                .completed(false)
-                .build();
-
-        // Define service mock behavior
         Mockito.when(taskService.getTaskById(1L)).thenReturn(task);
 
-        // Perform GET request and validate response
-        mockMvc.perform(get("/api/v1/tasks/{taskId}", 1))
-                .andExpect(status().isOk()) // Expect HTTP 200 OK
-                .andExpect(jsonPath("$.message").value("Task fetched successfully")) // Verify response message
-                .andExpect(jsonPath("$.data.name").value("Test Task")); // Verify returned task name
+        mockMvc.perform(get("/api/v1/tasks/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Task fetched successfully"))
+                .andExpect(jsonPath("$.data.name").value("Test Task"));
     }
 
-    /**
-     * Test: GET /api/v1/tasks
-     * Goal: Ensure that fetching all tasks returns HTTP 200 and the correct list size.
-     */
     @Test
     void testGetAllTasks() throws Exception {
-        // Mocked list of tasks returned by the service
-        List<Task> tasks = List.of(
-                Task.builder().id(1L).name("Task 1").description("Desc 1").completed(false).build(),
-                Task.builder().id(2L).name("Task 2").description("Desc 2").completed(true).build()
-        );
+        Mockito.when(taskService.getAllTasks()).thenReturn(List.of(task));
 
-        // Define service mock behavior
-        Mockito.when(taskService.getAllTasks()).thenReturn(tasks);
-
-        // Perform GET request and validate response
         mockMvc.perform(get("/api/v1/tasks"))
-                .andExpect(status().isOk()) // Expect HTTP 200 OK
-                .andExpect(jsonPath("$.message").value("Task fetched successfully")) // Verify response message
-                .andExpect(jsonPath("$.data.length()").value(2)); // Verify returned list size
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Task fetched successfully"))
+                .andExpect(jsonPath("$.data[0].name").value("Test Task"));
+    }
+
+    // ---------------- Validation Tests ----------------
+
+    @Test
+    void testCreateTaskValidationFails_BlankTitle() throws Exception {
+        TaskDto dto = new TaskDto(1L, "", "Valid description", false);
+
+        mockMvc.perform(post("/api/v1/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testUpdateTaskValidationFails_BlankTitle() throws Exception {
+        TaskDto dto = new TaskDto(1L, "   ", "Some description", false);
+
+        mockMvc.perform(put("/api/v1/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void testCreateTaskValidationFails_TitleTooLong() throws Exception {
+        String longTitle = "a".repeat(101); // longer than 100 chars
+        TaskDto dto = new TaskDto(1L, longTitle, "Valid description", false);
+
+        mockMvc.perform(post("/api/v1/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    // ---------------- Exception Tests ----------------
+
+    @Test
+    void testUpdateTaskNotFound() throws Exception {
+        TaskDto dto = new TaskDto(999L, "Nonexistent", "Does not exist", false);
+
+        Mockito.when(taskService.updateTask(any(Task.class))).thenReturn(null);
+
+        mockMvc.perform(put("/api/v1/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void testGetTaskByIdNotFound() throws Exception {
+        Mockito.when(taskService.getTaskById(42L)).thenReturn(null);
+
+        mockMvc.perform(get("/api/v1/tasks/42"))
+                .andExpect(status().isNotFound());
     }
 }

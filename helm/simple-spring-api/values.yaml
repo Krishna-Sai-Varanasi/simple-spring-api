@@ -1,0 +1,33 @@
+replicaCount: 1
+
+image:
+  repository: 
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: LoadBalancer
+  port: 9595
+  # nodeport: 9595
+  targetPort: 9595
+
+serviceAccount:
+  create: false
+  name: ""
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+
+ingress:
+  enabled: false
+  name: ""
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - /
+  tls: []
