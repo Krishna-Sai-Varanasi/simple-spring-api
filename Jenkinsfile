@@ -34,7 +34,7 @@ pipeline {
     }
 
     stages {
-        stage to checkout the code from the repository
+        // stage to checkout the code from the repository
          stage('Checkout') {
             steps {
                 echo 'Cloning repository...'
